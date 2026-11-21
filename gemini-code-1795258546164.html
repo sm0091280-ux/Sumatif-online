@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ujian Online + Kamera Mengambang</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+
+    /* Bar atas */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .topbar-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #111827;
+    }
+    .topbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-pill {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #374151;
+      max-width: 360px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status-pill.ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .status-pill.err {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .status-pill.done {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    #btnStartCam {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+    #btnStartCam:hover {
+      background-color: #1d4ed8;
+    }
+
+    /* Tombol "Buka di Tab Baru" disembunyikan sesuai permintaan */
+    #btnOpenTab {
+      display: none !important;
+    }
+
+    /* Banner informasi saat soal sudah terkirim */
+    .submitted-banner {
+      display: none;
+      width: 100%;
+      max-width: 960px;
+      margin-bottom: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e3a8a;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    /* Area utama Google Form tertanam */
+    .exam-container {
+      width: 100%;
+      min-height: calc(100vh - 58px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+    .form-frame-wrapper {
+      width: 100%;
+      max-width: 960px;
+      height: 82vh;
+      min-height: 540px;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+      border: 1px solid #e5e7eb;
+    }
+    iframe#googleFormFrame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* Panel kontrol di bagian akhir/bawah halaman (muncul saat soal sudah dikirim) */
+    .end-controls {
+      display: none;
+      width: 100%;
+      max-width: 960px;
+      margin-top: 14px;
+      padding: 14px 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    }
+    .end-controls-label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #374151;
+    }
+    .end-controls-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    #btnStopCamEnd {
+      background-color: #dc2626;
+      color: #ffffff;
+    }
+    #btnStopCamEnd:hover {
+      background-color: #b91c1c;
+    }
+    #btnHideCamEnd {
+      background-color: #4b5563;
+      color: #ffffff;
+    }
+    #btnHideCamEnd:hover {
+      background-color: #374151;
+    }
+
+    .helper-note {
+      max-width: 960px;
+      width: 100%;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* Kotak kamera mengambang */
+    .floating-cam {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 220px;
+      background: #111827;
+      border: 2px solid #2563eb;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+      z-index: 50;
+      display: none;
+      user-select: none;
+      touch-action: none;
+    }
+    .floating-cam-header {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: grab;
+    }
+    .floating-cam-header:active {
+      cursor: grabbing;
+    }
+    .floating-cam-body {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000000;
+    }
+    video#camVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: block;
+    }
+    .live-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-right: 5px;
+    }
+
+    @media (max-width: 600px) {
+      .floating-cam {
+        width: 145px;
+        right: 12px;
+        bottom: 12px;
+      }
+      .form-frame-wrapper {
+        height: 76vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-title">Lembar Ujian Online</div>
+    <div class="topbar-controls">
+      <span id="statusPill" class="status-pill">Kamera belum aktif</span>
+      <button type="button" id="btnStartCam">Aktifkan Kamera</button>
+      <a
+        id="btnOpenTab"
+        href="https://forms.gle/VNiKbXCcSRgNpyow7"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Buka di Tab Baru
+      </a>
+    </div>
+  </header>
+
+  <main class="exam-container">
+    <div id="submittedBanner" class="submitted-banner">
+      Soal telah dikirim. Kamera otomatis dimatikan.
+    </div>
+
+    <div class="form-frame-wrapper">
+      <iframe
+        id="googleFormFrame"
+        src="https://forms.gle/VNiKbXCcSRgNpyow7"
+        allow="autoplay; camera; microphone"
+        loading="lazy"
+      ></iframe>
+    </div>
+
+    <!-- Panel tombol di bagian akhir/bawah (muncul ketika soal dikirim) -->
+    <section id="endControls" class="end-controls" aria-label="Kontrol akhir ujian">
+      <div class="end-controls-label">Kontrol Akhir Ujian:</div>
+      <div class="end-controls-buttons">
+        <button type="button" id="btnHideCamEnd">Sembunyikan Kotak</button>
+        <button type="button" id="btnStopCamEnd">Matikan Kamera</button>
+      </div>
+    </section>
+
+    <div class="helper-note">
+      <span>Tips: Kotak kamera mengambang bisa digeser ke posisi lain agar tidak menutupi pilihan jawaban.</span>
+      <span>Kamera otomatis mati saat keluar dari jendela/tab ini atau setelah soal dikirim.</span>
+    </div>
+  </main>
+
+  <div id="floatingCam" class="floating-cam" aria-label="Pratinjau kamera mengambang">
+    <div id="camDragHandle" class="floating-cam-header">
+      <span><span class="live-dot"></span>Kamera Aktif</span>
+      <span>Geser</span>
+    </div>
+    <div class="floating-cam-body">
+      <video id="camVideo" autoplay playsinline muted></video>
+    </div>
+  </div>
+
+  <script>
+    // Jika tautan pendek forms.gle tidak tampil di iframe, ganti dengan URL embed:
+    // https://docs.google.com/forms/d/e/ID_FORM_ANDA/viewform?embedded=true
+    const GOOGLE_FORM_EMBED_URL = "https://forms.gle/VNiKbXCcSRgNpyow7";
+    const GOOGLE_FORM_DIRECT_URL = "https://forms.gle/VNiKbXCcSRgNpyow7";
+
+    const googleFormFrame = document.getElementById("googleFormFrame");
+    const btnOpenTab = document.getElementById("btnOpenTab");
+    const btnStartCam = document.getElementById("btnStartCam");
+    const endControls = document.getElementById("endControls");
+    const btnHideCamEnd = document.getElementById("btnHideCamEnd");
+    const btnStopCamEnd = document.getElementById("btnStopCamEnd");
+    const floatingCam = document.getElementById("floatingCam");
+    const dragHandle = document.getElementById("camDragHandle");
+    const camVideo = document.getElementById("camVideo");
+    const statusPill = document.getElementById("statusPill");
+    const submittedBanner = document.getElementById("submittedBanner");
+
+    googleFormFrame.src = GOOGLE_FORM_EMBED_URL;
+    btnOpenTab.href = GOOGLE_FORM_DIRECT_URL;
+
+    let activeStream = null;
+    let iframeLoadCount = 0;
+    let examSubmitted = false;
+    let isBoxHidden = false;
+
+    function setStatus(text, type = "") {
+      statusPill.textContent = text;
+      statusPill.title = text;
+      statusPill.className = "status-pill" + (type ? " " + type : "");
+    }
+
+    function turnOffCamera(message = "Kamera mati. Klik Aktifkan Kamera", type = "") {
+      if (activeStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+        activeStream = null;
+      }
+      camVideo.srcObject = null;
+      floatingCam.style.display = "none";
+      btnStartCam.style.display = "inline-block";
+      btnStartCam.disabled = false;
+      btnStartCam.textContent = "Aktifkan Kamera";
+      setStatus(message, type);
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        turnOffCamera("Browser tidak mendukung kamera atau bukan HTTPS", "err");
+        return;
+      }
+
+      if (activeStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+        activeStream = null;
+      }
+
+      btnStartCam.disabled = true;
+      btnStartCam.textContent = "Meminta izin...";
+      setStatus("Menunggu izin kamera...");
+
+      try {
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 480 },
+              height: { ideal: 360 }
+            },
+            audio: false
+          });
+        } catch (firstErr) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+
+        activeStream = stream;
+        camVideo.srcObject = stream;
+        await camVideo.play();
+
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.onended = () => {
+            turnOffCamera("Kamera terputus. Klik Aktifkan Kamera", "err");
+          };
+        }
+
+        isBoxHidden = false;
+        floatingCam.style.display = "block";
+        btnStartCam.style.display = "none";
+        setStatus("Kamera aktif", "ok");
+      } catch (err) {
+        turnOffCamera(`Gagal (${err.name}): ${err.message || "izin ditolak"}`, "err");
+      }
+    }
+
+    function handleExamSubmitted() {
+      if (examSubmitted) return;
+      examSubmitted = true;
+      submittedBanner.style.display = "block";
+      endControls.style.display = "flex";
+      turnOffCamera("Soal sudah dikirim (kamera mati)", "done");
+    }
+
+    googleFormFrame.addEventListener("load", () => {
+      iframeLoadCount += 1;
+
+      try {
+        const frameDoc = googleFormFrame.contentDocument || googleFormFrame.contentWindow?.document;
+        const bodyText = frameDoc?.body?.innerText || "";
+        if (
+          bodyText.includes("Tanggapan Anda telah direkam") ||
+          bodyText.includes("Your response has been recorded") ||
+          bodyText.includes("Kirim tanggapan lain") ||
+          bodyText.includes("Submit another response")
+        ) {
+          handleExamSubmitted();
+          return;
+        }
+      } catch (e) {
+        // Pembatasan lintas-domain pada Google Form normal terjadi
+      }
+
+      if (iframeLoadCount >= 2 && activeStream) {
+        handleExamSubmitted();
+      }
+    });
+
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (
+        data === "formSubmitted" ||
+        (typeof data === "object" && data !== null && data.type === "FORM_SUBMITTED")
+      ) {
+        handleExamSubmitted();
+      }
+    });
+
+    function handleLeaveWindow() {
+      if (activeStream || floatingCam.style.display === "block") {
+        turnOffCamera("Keluar dari jendela situs. Kamera dimatikan", "err");
+      } else {
+        btnStartCam.style.display = "inline-block";
+        btnStartCam.disabled = false;
+        btnStartCam.textContent = "Aktifkan Kamera";
+      }
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        handleLeaveWindow();
+      }
+    });
+
+    window.addEventListener("blur", () => {
+      if (document.visibilityState === "hidden") {
+        handleLeaveWindow();
+      }
+    });
+
+    window.addEventListener("pagehide", handleLeaveWindow);
+    window.addEventListener("beforeunload", handleLeaveWindow);
+
+    btnStartCam.addEventListener("click", () => {
+      examSubmitted = false;
+      submittedBanner.style.display = "none";
+      endControls.style.display = "none";
+      startCamera();
+    });
+
+    btnStopCamEnd.addEventListener("click", () => {
+      turnOffCamera("Kamera dimatikan di akhir ujian", "done");
+    });
+
+    btnHideCamEnd.addEventListener("click", () => {
+      isBoxHidden = !isBoxHidden;
+      floatingCam.style.display = isBoxHidden || !activeStream ? "none" : "block";
+      btnHideCamEnd.textContent = isBoxHidden ? "Tampilkan Kotak" : "Sembunyikan Kotak";
+    });
+
+    // Fitur geser (drag) kotak kamera mengambang di layar (mouse & touch)
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    function beginDrag(clientX, clientY) {
+      const rect = floatingCam.getBoundingClientRect();
+      isDragging = true;
+      offsetX = clientX - rect.left;
+      offsetY = clientY - rect.top;
+      floatingCam.style.left = rect.left + "px";
+      floatingCam.style.top = rect.top + "px";
+      floatingCam.style.right = "auto";
+      floatingCam.style.bottom = "auto";
+    }
+
+    function moveDrag(clientX, clientY) {
+      if (!isDragging) return;
+      const maxLeft = window.innerWidth - floatingCam.offsetWidth - 8;
+      const maxTop = window.innerHeight - floatingCam.offsetHeight - 8;
+      const nextLeft = Math.min(Math.max(8, clientX - offsetX), Math.max(8, maxLeft));
+      const nextTop = Math.min(Math.max(8, clientY - offsetY), Math.max(8, maxTop));
+      floatingCam.style.left = nextLeft + "px";
+      floatingCam.style.top = nextTop + "px";
+    }
+
+    function endDrag() {
+      isDragging = false;
+    }
+
+    dragHandle.addEventListener("mousedown", (e) => {
+      beginDrag(e.clientX, e.clientY);
+    });
+    window.addEventListener("mousemove", (e) => {
+      moveDrag(e.clientX, e.clientY);
+    });
+    window.addEventListener("mouseup", endDrag);
+
+    dragHandle.addEventListener("touchstart", (e) => {
+      if (e.touches.length > 0) {
+        beginDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (isDragging && e.touches.length > 0) {
+        moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+    window.addEventListener("touchend", endDrag);
+  </script>
+</body>
+</html>
